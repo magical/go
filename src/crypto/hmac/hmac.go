@@ -34,15 +34,27 @@ import (
 // opad = 0x5c byte repeated for key length
 // hmac = H([key ^ opad] H([key ^ ipad] text))
 
+type settableHash interface {
+	hash.Hash
+	Set(hash.Hash)
+}
+
 type hmac struct {
-	size         int
-	blocksize    int
-	opad, ipad   []byte
-	outer, inner hash.Hash
+	size           int
+	blocksize      int
+	opad, ipad     []byte
+	outer, inner   hash.Hash
+	outer0, inner0 settableHash
 }
 
 func (h *hmac) Sum(in []byte) []byte {
 	origLen := len(in)
+	if h.outer0 != nil {
+		in = h.inner0.Sum(in)
+		h.outer0.Set(h.outer)
+		h.outer0.Write(in[origLen:])
+		return h.outer0.Sum(in[:origLen])
+	}
 	in = h.inner.Sum(in)
 	h.outer.Reset()
 	h.outer.Write(h.opad)
@@ -51,6 +63,9 @@ func (h *hmac) Sum(in []byte) []byte {
 }
 
 func (h *hmac) Write(p []byte) (n int, err error) {
+	if h.inner0 != nil {
+		return h.inner0.Write(p)
+	}
 	return h.inner.Write(p)
 }
 
@@ -59,8 +74,12 @@ func (h *hmac) Size() int { return h.size }
 func (h *hmac) BlockSize() int { return h.blocksize }
 
 func (h *hmac) Reset() {
-	h.inner.Reset()
-	h.inner.Write(h.ipad)
+	if h.inner0 != nil {
+		h.inner0.Set(h.inner)
+	} else {
+		h.inner.Reset()
+		h.inner.Write(h.ipad)
+	}
 }
 
 // New returns a new HMAC hash using the given hash.Hash type and key.
@@ -85,7 +104,14 @@ func New(h func() hash.Hash, key []byte) hash.Hash {
 	for i := range hm.opad {
 		hm.opad[i] ^= 0x5c
 	}
-	hm.inner.Write(hm.ipad)
+	if _, ok := hm.inner.(settableHash); ok {
+		hm.inner0 = h().(settableHash)
+		hm.outer0 = h().(settableHash)
+		hm.inner.Write(hm.ipad)
+		hm.outer.Reset()
+		hm.outer.Write(hm.opad)
+	}
+	hm.Reset()
 	return hm
 }
 
