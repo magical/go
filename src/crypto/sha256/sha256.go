@@ -191,3 +191,8 @@ func Sum224(data []byte) (sum224 [Size224]byte) {
 	copy(sum224[:], sum[:Size224])
 	return
 }
+
+func (d *digest) CopyTo(h hash.Hash) {
+	// panics if h is not a *digest
+	*h.(*digest) = *d
+}

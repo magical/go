@@ -34,18 +34,28 @@ import (
 // opad = 0x5c byte repeated for key length
 // hmac = H([key ^ opad] H([key ^ ipad] text))
 
+type copyHash interface {
+	hash.Hash
+	CopyTo(hash.Hash)
+}
+
 type hmac struct {
-	size         int
-	blocksize    int
-	opad, ipad   []byte
-	outer, inner hash.Hash
+	size           int
+	blocksize      int
+	opad, ipad     []byte
+	outer, inner   hash.Hash
+	outer0, inner0 copyHash
 }
 
 func (h *hmac) Sum(in []byte) []byte {
 	origLen := len(in)
 	in = h.inner.Sum(in)
-	h.outer.Reset()
-	h.outer.Write(h.opad)
+	if h.outer0 != nil {
+		h.outer0.CopyTo(h.outer)
+	} else {
+		h.outer.Reset()
+		h.outer.Write(h.opad)
+	}
 	h.outer.Write(in[origLen:])
 	return h.outer.Sum(in[:origLen])
 }
@@ -59,8 +69,12 @@ func (h *hmac) Size() int { return h.size }
 func (h *hmac) BlockSize() int { return h.blocksize }
 
 func (h *hmac) Reset() {
-	h.inner.Reset()
-	h.inner.Write(h.ipad)
+	if h.inner0 != nil {
+		h.inner0.CopyTo(h.inner)
+	} else {
+		h.inner.Reset()
+		h.inner.Write(h.ipad)
+	}
 }
 
 // New returns a new HMAC hash using the given hash.Hash type and key.
@@ -85,7 +99,13 @@ func New(h func() hash.Hash, key []byte) hash.Hash {
 	for i := range hm.opad {
 		hm.opad[i] ^= 0x5c
 	}
-	hm.inner.Write(hm.ipad)
+	if _, ok := hm.inner.(copyHash); ok {
+		hm.inner0 = h().(copyHash)
+		hm.inner0.Write(hm.ipad)
+		hm.outer0 = h().(copyHash)
+		hm.outer0.Write(hm.opad)
+	}
+	hm.Reset()
 	return hm
 }
 
