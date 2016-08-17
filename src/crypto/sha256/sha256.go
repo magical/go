@@ -191,3 +191,8 @@ func Sum224(data []byte) (sum224 [Size224]byte) {
 	copy(sum224[:], sum[:Size224])
 	return
 }
+
+func (d0 *digest) Clone() hash.Hash {
+	d := *d0
+	return &d
+}
