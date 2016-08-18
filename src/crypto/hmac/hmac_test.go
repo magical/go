@@ -569,6 +569,9 @@ func TestEqual(t *testing.T) {
 	}
 }
 
+// ensure that sha256 implements the fast path
+var _ = sha256.New().(hashCloner)
+
 func BenchmarkHMACSHA256_1K(b *testing.B) {
 	key := make([]byte, 32)
 	buf := make([]byte, 1024)

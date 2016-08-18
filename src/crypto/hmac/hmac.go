@@ -34,9 +34,9 @@ import (
 // opad = 0x5c byte repeated for key length
 // hmac = H([key ^ opad] H([key ^ ipad] text))
 
-type copyHash interface {
+type hashCloner interface {
 	hash.Hash
-	CopyTo(hash.Hash)
+	Clone(hash.Hash) hash.Hash
 }
 
 type hmac struct {
@@ -44,14 +44,14 @@ type hmac struct {
 	blocksize      int
 	opad, ipad     []byte
 	outer, inner   hash.Hash
-	outer0, inner0 copyHash
+	outer0, inner0 hashCloner
 }
 
 func (h *hmac) Sum(in []byte) []byte {
 	origLen := len(in)
 	in = h.inner.Sum(in)
 	if h.outer0 != nil {
-		h.outer0.CopyTo(h.outer)
+		h.outer = h.outer0.Clone(h.outer)
 	} else {
 		h.outer.Reset()
 		h.outer.Write(h.opad)
@@ -70,7 +70,7 @@ func (h *hmac) BlockSize() int { return h.blocksize }
 
 func (h *hmac) Reset() {
 	if h.inner0 != nil {
-		h.inner0.CopyTo(h.inner)
+		h.inner = h.inner0.Clone(h.inner)
 	} else {
 		h.inner.Reset()
 		h.inner.Write(h.ipad)
@@ -99,10 +99,10 @@ func New(h func() hash.Hash, key []byte) hash.Hash {
 	for i := range hm.opad {
 		hm.opad[i] ^= 0x5c
 	}
-	if _, ok := hm.inner.(copyHash); ok {
-		hm.inner0 = h().(copyHash)
+	if _, ok := hm.inner.(hashCloner); ok {
+		hm.inner0 = h().(hashCloner)
 		hm.inner0.Write(hm.ipad)
-		hm.outer0 = h().(copyHash)
+		hm.outer0 = h().(hashCloner)
 		hm.outer0.Write(hm.opad)
 	}
 	hm.Reset()

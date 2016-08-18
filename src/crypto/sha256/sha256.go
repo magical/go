@@ -192,7 +192,11 @@ func Sum224(data []byte) (sum224 [Size224]byte) {
 	return
 }
 
-func (d *digest) CopyTo(h hash.Hash) {
-	// panics if h is not a *digest
-	*h.(*digest) = *d
+func (d0 *digest) Clone(h hash.Hash) hash.Hash {
+	d, ok := h.(*digest)
+	if !ok {
+		d = new(digest)
+	}
+	*d = *d0
+	return d
 }
