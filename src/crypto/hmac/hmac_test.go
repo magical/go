@@ -572,11 +572,11 @@ func TestEqual(t *testing.T) {
 // ensure that sha256 implements the fast path
 var _ = sha256.New().(hashCloner)
 
-func BenchmarkHMACSHA256_1K(b *testing.B) {
+func benchmark(b *testing.B, f func() hash.Hash, len int) {
 	key := make([]byte, 32)
-	buf := make([]byte, 1024)
-	h := New(sha256.New, key)
-	b.SetBytes(int64(len(buf)))
+	buf := make([]byte, len)
+	h := New(f, key)
+	b.SetBytes(int64(len))
 	for i := 0; i < b.N; i++ {
 		h.Write(buf)
 		h.Reset()
@@ -585,15 +585,9 @@ func BenchmarkHMACSHA256_1K(b *testing.B) {
 	}
 }
 
-func BenchmarkHMACSHA256_32(b *testing.B) {
-	key := make([]byte, 32)
-	buf := make([]byte, 32)
-	h := New(sha256.New, key)
-	b.SetBytes(int64(len(buf)))
-	for i := 0; i < b.N; i++ {
-		h.Write(buf)
-		h.Reset()
-		mac := h.Sum(nil)
-		buf[0] = mac[0]
-	}
-}
+func BenchmarkHMACSHA1_1K(b *testing.B)   { benchmark(b, sha1.New, 1024) }
+func BenchmarkHMACSHA1_32(b *testing.B)   { benchmark(b, sha1.New, 32) }
+func BenchmarkHMACSHA256_1K(b *testing.B) { benchmark(b, sha256.New, 1024) }
+func BenchmarkHMACSHA256_32(b *testing.B) { benchmark(b, sha256.New, 32) }
+func BenchmarkHMACSHA512_1K(b *testing.B) { benchmark(b, sha512.New, 1024) }
+func BenchmarkHMACSHA512_32(b *testing.B) { benchmark(b, sha512.New, 32) }
