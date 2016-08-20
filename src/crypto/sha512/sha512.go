@@ -286,3 +286,12 @@ func Sum512_256(data []byte) (sum256 [Size256]byte) {
 	copy(sum256[:], sum[:Size256])
 	return
 }
+
+func (d0 *digest) Clone(h hash.Hash) hash.Hash {
+	d, ok := h.(*digest)
+	if !ok {
+		d = new(digest)
+	}
+	*d = *d0
+	return d
+}

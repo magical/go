@@ -128,3 +128,12 @@ func Sum(data []byte) [Size]byte {
 	d.Write(data)
 	return d.checkSum()
 }
+
+func (d0 *digest) Clone(h hash.Hash) hash.Hash {
+	d, ok := h.(*digest)
+	if !ok {
+		d = new(digest)
+	}
+	*d = *d0
+	return d
+}
