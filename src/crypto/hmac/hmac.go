@@ -74,6 +74,10 @@ func (h *hmac) Reset() {
 	} else {
 		h.inner.Reset()
 		h.inner.Write(h.ipad)
+		if c, ok := h.inner.(hashCloner); ok {
+			h.inner0 = c
+			h.inner = c.Clone(nil)
+		}
 	}
 }
 

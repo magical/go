@@ -572,6 +572,12 @@ func TestEqual(t *testing.T) {
 // ensure that sha256 implements the fast path
 var _ = sha256.New().(hashCloner)
 
+func justHash(f func() hash.Hash) func() hash.Hash {
+	return func() hash.Hash {
+		return struct{ hash.Hash }{f()}
+	}
+}
+
 func benchmark(b *testing.B, f func() hash.Hash, len int) {
 	key := make([]byte, 32)
 	buf := make([]byte, len)
