@@ -104,6 +104,10 @@ func New(h func() hash.Hash, key []byte) hash.Hash {
 		hm.inner0.Write(hm.ipad)
 		hm.outer0 = h().(hashCloner)
 		hm.outer0.Write(hm.opad)
+		// Don't need these any more;
+		// let the gc reclaim them
+		hm.ipad = nil
+		hm.opad = nil
 	}
 	hm.Reset()
 	return hm
