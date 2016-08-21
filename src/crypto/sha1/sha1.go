@@ -92,19 +92,25 @@ func (d *digest) checkSum() [Size]byte {
 	len := d.len
 	// Padding. Add a 1 bit and 0 bits until 56 bytes mod 64.
 	var tmp [64]byte
-	tmp[0] = 0x80
 	if len%64 < 56 {
-		d.Write(tmp[0 : 56-len%64])
+		tmp[d.nx] = 0x80
 	} else {
-		d.Write(tmp[0 : 64+56-len%64])
+		tmp[0] = 0x80
+		d.Write(tmp[0 : 64-d.nx])
+		tmp[0] = 0
 	}
 
 	// Length in bits.
-	len <<= 3
-	for i := uint(0); i < 8; i++ {
-		tmp[i] = byte(len >> (56 - 8*i))
-	}
-	d.Write(tmp[0:8])
+	len *= 8
+	tmp[56+0] = byte(len >> 56)
+	tmp[56+1] = byte(len >> 48)
+	tmp[56+2] = byte(len >> 40)
+	tmp[56+3] = byte(len >> 32)
+	tmp[56+4] = byte(len >> 24)
+	tmp[56+5] = byte(len >> 16)
+	tmp[56+6] = byte(len >> 8)
+	tmp[56+7] = byte(len >> 0)
+	d.Write(tmp[d.nx:64])
 
 	if d.nx != 0 {
 		panic("d.nx != 0")
